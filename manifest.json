@@ -1,0 +1,9 @@
+{
+  "short_name": "DuoTodo",
+  "name": "Input Ricevuto",
+  "start_url": "./index.html",
+  "background_color": "#f0f2f5",
+  "theme_color": "#58cc02",
+  "display": "standalone",
+  "orientation": "portrait"
+}
