@@ -386,6 +386,15 @@
 
     // Avvia tutto al caricamento della pagina
     window.onload = init;
+
+function aggiornaWidgetKustom(nuovoSlancio, nuovoStato) {
+        const urlKWGT = `kustomwidget://variable/send?slancio_giorni=${nuovoSlancio}&slancio_stato=${nuovoStato}`;
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = urlKWGT;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 300);
+    }
   </script>
 </body>
 </html>
