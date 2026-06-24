@@ -2,19 +2,18 @@
 <html>
 <head><meta charset="UTF-8"></head>
 <body>
-  <!-- KWGT leggerà questo div per sapere lo slancio e lo stato -->
-  <div id="streak-data">0|spento</div>
+  <div id="streak-count">0</div>
+  <div id="streak-status">da_fare</div>
 
   <script>
-    // Recupera lo stato salvato nel browser
-    // Nota: Poiché KWGT fa richieste web separate, per far sincronizzare i dati 
-    // l'ideale sarà salvare lo stato o inviarlo, ma per ora configuriamo la lettura.
     const savedState = localStorage.getItem('duo_todo_state');
     if (savedState) {
       const state = JSON.parse(savedState);
       const todayStr = new Date().toDateString();
       const isCompletedToday = state.lastCompletedDate === todayStr;
-      document.getElementById('streak-data').innerText = `${state.streak}|${isCompletedToday ? 'attivo' : 'da_fare'}`;
+      
+      document.getElementById('streak-count').innerText = state.streak;
+      document.getElementById('streak-status').innerText = isCompletedToday ? 'attivo' : 'da_fare';
     }
   </script>
 </body>
