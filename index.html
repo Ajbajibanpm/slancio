@@ -1,400 +1,293 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Input Ricevuto</title>
-  <link rel="manifest" href="manifest.json">
-  <style>
-    :root {
-      --bg-color: #f0f2f5;
-      --card-bg: #ffffff;
-      --text-color: #3c3c3c;
-      --duo-green: #58cc02;
-      --duo-green-border: #46a302;
-      --duo-orange: #ff9600;
-      --duo-orange-border: #e67e00;
-      --duo-gray: #e5e5e5;
-      --duo-blue: #1899d6;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slancio</title>
+    <style>
+        :root {
+            --bg-color: #f7f9fa;
+            --card-bg: #ffffff;
+            --text-main: #3c3c3c;
+            --text-sub: #afafaf;
+            --border-color: #e5e5e5;
+            --primary-color: #1cb0f6;
+        }
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-    .container {
-      max-width: 450px;
-      width: 100%;
-    }
+        .widget-container {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            width: 280px;
+            text-align: center;
+            box-shadow: 0 4px 0 var(--border-color);
+            margin-bottom: 20px;
+        }
 
-    /* --- WIDGET STILE DUOLINGO --- */
-    .duo-widget {
-      background: var(--card-bg);
-      border: 2px solid var(--duo-gray);
-      border-radius: 20px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 4px 0 var(--duo-gray);
-      margin-bottom: 25px;
-      position: relative;
-    }
+        .widget-title {
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            margin-bottom: 10px;
+        }
 
-    .streak-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
-      margin: 15px 0;
-    }
+        .streak-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
 
-    .streak-fire {
-      font-size: 60px;
-      filter: drop-shadow(0 2px 0 rgba(0,0,0,0.1));
-      transition: transform 0.3s ease;
-    }
+        .streak-emoji {
+            font-size: 48px;
+            line-height: 1;
+        }
 
-    .streak-fire.active {
-      animation: pulse 1.5s infinite alternate;
-    }
+        .streak-count {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--text-main);
+        }
 
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      100% { transform: scale(1.1); }
-    }
+        .btn-slancio {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1899d6;
+            transition: all 0.1s ease;
+            width: 100%;
+            text-transform: uppercase;
+        }
 
-    .streak-count {
-      font-size: 48px;
-      font-weight: 800;
-      color: var(--duo-gray);
-    }
+        .btn-slancio:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
 
-    .streak-count.active {
-      color: var(--duo-orange);
-    }
+        .btn-slancio:disabled {
+            background-color: var(--border-color);
+            box-shadow: 0 4px 0 #cccccc;
+            color: var(--text-sub);
+            cursor: not-allowed;
+        }
 
-    .widget-status {
-      font-weight: 700;
-      font-size: 16px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 15px;
-    }
+        /* Sezione To-Do (Nascondila se vuoi isolare visivamente il widget) */
+        .todo-container {
+            width: 280px;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 0 var(--border-color);
+        }
 
-    /* --- PULSANTI STILE DUOLINGO --- */
-    .duo-btn {
-      background: var(--duo-gray);
-      border: none;
-      border-bottom: 4px solid #afafaf;
-      border-radius: 12px;
-      color: #777;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 700;
-      padding: 12px 24px;
-      text-transform: uppercase;
-      width: 100%;
-      transition: all 0.1s ease;
-    }
+        .todo-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
 
-    .duo-btn:active {
-      border-bottom-width: 0px;
-      margin-top: 4px;
-    }
+        .todo-input {
+            flex: 1;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px;
+            font-size: 14px;
+        }
 
-    .duo-btn.btn-active {
-      background: var(--duo-orange);
-      border-bottom: 4px solid var(--duo-orange-border);
-      color: white;
-    }
+        .todo-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
-    .duo-btn.btn-submit {
-      background: var(--duo-green);
-      border-bottom: 4px solid var(--duo-green-border);
-      color: white;
-    }
+        .todo-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
 
-    /* --- TO DO LIST --- */
-    .todo-box {
-      background: var(--card-bg);
-      border: 2px solid var(--duo-gray);
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 4px 0 var(--duo-gray);
-    }
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
 
-    .input-group {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+        .todo-item input {
+            margin-right: 10px;
+        }
 
-    .duo-input {
-      flex: 1;
-      border: 2px solid var(--duo-gray);
-      border-radius: 12px;
-      padding: 10px 15px;
-      font-size: 16px;
-      outline: none;
-      background: #f7f7f7;
-    }
-
-    .duo-input:focus {
-      border-color: var(--duo-blue);
-    }
-
-    .btn-add {
-      background: var(--duo-blue);
-      border-bottom: 4px solid #1482b5;
-      color: white;
-      width: auto;
-    }
-
-    .task-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .task-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 10px;
-      border-bottom: 2px solid var(--duo-gray);
-    }
-
-    .task-item:last-child {
-      border-bottom: none;
-    }
-
-    .task-text {
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      user-select: none;
-    }
-
-    .task-text.completed {
-      text-decoration: line-through;
-      color: #afafaf;
-    }
-
-    .btn-delete {
-      background: none;
-      border: none;
-      color: #ff4b4b;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 16px;
-    }
-  </style>
+        /* Nasconde i To-Do se aperto dentro il widget tramite URL parametrizzato */
+        body.widget-mode .todo-container {
+            display: none;
+        }
+        body.widget-mode {
+            padding: 5px;
+            background: transparent;
+        }
+        body.widget-mode .widget-container {
+            margin: 0;
+            box-shadow: none;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
-    
-    <div class="duo-widget" id="widget">
-      <div class="widget-status" id="widget-status">SLANCIO SPENTO</div>
-      <div class="streak-container">
-        <span class="streak-fire" id="fire-icon">🔥</span>
-        <span class="streak-count" id="streak-count">0</span>
-      </div>
-      <button class="duo-btn" id="streak-trigger" onclick="toggleStreak()">Completa la Giornata!</button>
+    <!-- BLOCCO WIDGET SLANCIO -->
+    <div class="widget-container">
+        <div id="widget-title" class="widget-title">Nessuno Slancio</div>
+        <div class="streak-display">
+            <span id="streak-emoji" class="streak-emoji">😴</span>
+            <span id="streak-count" class="streak-count">0</span>
+        </div>
+        <button id="bottone-slancio" class="btn-slancio">Ottieni Slancio</button>
     </div>
 
-    <div class="todo-box">
-      <div class="input-group">
-        <input type="text" id="task-input" class="duo-input" placeholder="Nuova task...">
-        <button class="duo-btn btn-add" onclick="addTask()">+</button>
-      </div>
-      <ul class="task-list" id="task-list"></ul>
+    <!-- BLOCCO LISTA DI TASK -->
+    <div class="todo-container">
+        <div class="todo-input-group">
+            <input type="text" id="todo-input" class="todo-input" placeholder="Nuova task...">
+            <button id="todo-add" class="todo-btn">+</button>
+        </div>
+        <ul id="todo-list" class="todo-list"></ul>
     </div>
 
-  </div>
+    <script>
+        // --- 1. STATO DELL'APPLICAZIONE ---
+        let state = {
+            streak: 0,
+            lastCompletedDate: null,
+            todos: []
+        };
 
-  <script>
-    // Configurazione Stato dell'Applicazione
-    let state = {
-      streak: 0,
-      lastCompletedDate: null,
-      tasks: []
-    };
+        // --- 2. CONTROLLO PARAMETRI URL (Per il Widget sulla Home) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlStreak = urlParams.get('streak');
+        const urlDone = urlParams.get('done');
 
-    // Inizializzazione applicazione
-    function init() {
-      const savedState = localStorage.getItem('duo_todo_state');
-      if (savedState) {
-        state = JSON.parse(savedState);
-      }
-      
-      checkDailyReset();
-      renderWidget();
-      renderTasks();
-    }
+        const isWidgetMode = (urlStreak !== null);
 
-    // Controlla se è un nuovo giorno per resettare lo slancio o pulire le task
-    function checkDailyReset() {
-      const todayStr = new Date().toDateString();
-      
-      if (state.lastCompletedDate) {
-        const lastDate = new Date(state.lastCompletedDate);
-        const today = new Date();
-        
-        // Calcola la differenza in giorni
-        const diffTime = Math.abs(today - lastDate);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        
-        // Se è passato più di un giorno dall'ultimo slancio, lo slancio si azzera
-        if (diffDays > 1 && lastDate.toDateString() !== todayStr) {
-          state.streak = 0;
-        }
-      }
-
-      // Reset quotidiano dello stato di completamento delle task
-      // Se l'ultimo accesso salvato non è oggi, deseleziona tutte le task per il nuovo giorno
-      const lastAccess = localStorage.getItem('last_access_date');
-      if (lastAccess !== todayStr) {
-        state.tasks.forEach(task => task.completed = false);
-        localStorage.setItem('last_access_date', todayStr);
-        saveState();
-      }
-    }
-
-    function saveState() {
-      localStorage.setItem('duo_todo_state', JSON.stringify(state));
-    }
-
-    // --- AGGIORNAMENTO GRAFICA WIDGET ---
-    function renderWidget() {
-      const todayStr = new Date().toDateString();
-      const isCompletedToday = state.lastCompletedDate === todayStr;
-
-      const fireIcon = document.getElementById('fire-icon');
-      const streakCount = document.getElementById('streak-count');
-      const widgetStatus = document.getElementById('widget-status');
-      const triggerBtn = document.getElementById('streak-trigger');
-
-      streakCount.innerText = state.streak;
-
-      if (state.streak > 0 && isCompletedToday) {
-        // Slancio Attivo Oggi
-        fireIcon.classList.add('active');
-        fireIcon.innerText = "🔥";
-        streakCount.classList.add('active');
-        widgetStatus.innerText = "Slancio Attivo!";
-        widgetStatus.style.color = "var(--duo-orange)";
-        triggerBtn.innerText = "Slancio Ottenuto";
-        triggerBtn.className = "duo-btn btn-submit";
-        triggerBtn.disabled = true;
-      } else {
-        // Slancio spento o in attesa per oggi
-        fireIcon.classList.remove('active');
-        fireIcon.innerText = "灰"; // Icona spenta/grigia o un emoji alternativo
-        fireIcon.innerText = state.streak > 0 ? "⚠️" : "❌"; 
-        
-        // Se c'è uno slancio passato ma oggi non è ancora attivo, rimetti il fuoco standard non animato
-        if(state.streak > 0) {
-          fireIcon.innerText = "🔥";
-          streakCount.classList.add('active');
-          widgetStatus.innerText = "Mantieni lo slancio!";
-          widgetStatus.style.color = "var(--duo-blue)";
+        if (isWidgetMode) {
+            // Attiva la modalità grafica compatta per il widget della Home
+            document.body.classList.add('widget-mode');
+            state.streak = parseInt(urlStreak, 10) || 0;
+            if (urlDone === 'true') {
+                state.lastCompletedDate = new Date().toDateString();
+            }
         } else {
-          fireIcon.innerText = "😴";
-          streakCount.classList.remove('active');
-          widgetStatus.innerText = "Nessuno slancio";
-          widgetStatus.style.color = "#777";
+            // Modalità Browser normale: carica da localStorage
+            const savedState = localStorage.getItem('duo_todo_state');
+            if (savedState) {
+                try {
+                    state = JSON.parse(savedState);
+                } catch (e) {
+                    console.error("Errore nel caricamento dati", e);
+                }
+            }
         }
 
-        triggerBtn.innerText = "Ottieni Slancio";
-        triggerBtn.className = "duo-btn btn-active";
-        triggerBtn.disabled = false;
-      }
-    }
+        // --- 3. RENDERING GRAFICO ---
+        function render() {
+            const todayStr = new Date().toDateString();
+            const isCompletedToday = state.lastCompletedDate === todayStr;
 
-    // --- LOGICA DELLO SLANCIO ---
-    function toggleStreak() {
-      const todayStr = new Date().toDateString();
-      
-      if (state.lastCompletedDate !== todayStr) {
-        state.streak += 1;
-        state.lastCompletedDate = todayStr;
-        saveState();
-        renderWidget();
-      }
-    }
+            // Aggiorna Contatore ed Emoji
+            document.getElementById('streak-count').innerText = state.streak;
+            
+            if (isCompletedToday) {
+                document.getElementById('streak-emoji').innerText = '🔥';
+                document.getElementById('widget-title').innerText = 'Slancio Attivo!';
+                document.getElementById('bottone-slancio').innerText = 'Completato';
+                document.getElementById('bottone-slancio').disabled = true;
+            } else {
+                document.getElementById('streak-emoji').innerText = '😴';
+                document.getElementById('widget-title').innerText = 'Nessuno Slancio';
+                document.getElementById('bottone-slancio').innerText = 'Ottieni Slancio';
+                document.getElementById('bottone-slancio').disabled = false;
+            }
 
-    // --- GESTIONE TASK ---
-    function addTask() {
-      const input = document.getElementById('task-input');
-      const text = input.value.trim();
-      if (!text) return;
+            // Genera la lista dei To-Do (se non siamo in modalità widget)
+            if (!isWidgetMode) {
+                const listEl = document.getElementById('todo-list');
+                listEl.innerHTML = '';
+                state.todos.forEach((todo, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'todo-item';
+                    li.innerHTML = `
+                        <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
+                        <span style="${todo.done ? 'text-decoration: line-through; color: #afafaf;' : ''}">${todo.text}</span>
+                    `;
+                    listEl.appendChild(li);
+                });
+            }
+        }
 
-      state.tasks.push({
-        id: Date.now(),
-        text: text,
-        completed: false
-      });
+        // --- 4. FUNZIONI LOGICHE ED EVENTI ---
+        
+        // Click del bottone Slancio
+        document.getElementById('bottone-slancio').addEventListener('click', () => {
+            const todayStr = new Date().toDateString();
+            if (state.lastCompletedDate !== todayStr) {
+                state.streak += 1;
+                state.lastCompletedDate = todayStr;
+                
+                if (!isWidgetMode) {
+                    localStorage.setItem('duo_todo_state', JSON.stringify(state));
+                }
+                
+                render();
 
-      input.value = '';
-      saveState();
-      renderTasks();
-    }
+                // TRUCCO: Genera l'URL aggiornato e naviga su di esso per mostrarlo nella barra indirizzi
+                const newUrl = `${window.location.origin}${window.location.pathname}?streak=${state.streak}&done=true`;
+                window.location.href = newUrl;
+            }
+        });
 
-    function toggleTask(id) {
-      state.tasks = state.tasks.map(task => {
-        if (task.id === id) task.completed = !task.completed;
-        return task;
-      });
-      saveState();
-      renderTasks();
-    }
+        // Aggiungi Task
+        document.getElementById('todo-add').addEventListener('click', () => {
+            const input = document.getElementById('todo-input');
+            if (input.value.trim() !== '') {
+                state.todos.push({ text: input.value.trim(), done: false });
+                input.value = '';
+                localStorage.setItem('duo_todo_state', JSON.stringify(state));
+                render();
+            }
+        });
 
-    function deleteTask(id) {
-      state.tasks = state.tasks.filter(task => task.id !== id);
-      saveState();
-      renderTasks();
-    }
+        // Cambia stato Task
+        window.toggleTodo = function(index) {
+            state.todos[index].done = !state.todos[index].done;
+            localStorage.setItem('duo_todo_state', JSON.stringify(state));
+            render();
+        };
 
-    function renderTasks() {
-      const list = document.getElementById('task-list');
-      list.innerHTML = '';
-
-      state.tasks.forEach(task => {
-        const li = document.createElement('li');
-        li.className = 'task-item';
-
-        li.innerHTML = `
-          <span class="task-text ${task.completed ? 'completed' : ''}" onclick="toggleTask(${task.id})">
-            <input type="checkbox" ${task.completed ? 'checked' : ''} style="pointer-events: none;">
-            ${task.text}
-          </span>
-          <button class="btn-delete" onclick="deleteTask(${task.id})">×</button>
-        `;
-        list.appendChild(li);
-      });
-    }
-
-    // Avvia tutto al caricamento della pagina
-    window.onload = init;
-
-function aggiornaWidgetKustom(nuovoSlancio, nuovoStato) {
-        const urlKWGT = `kustomwidget://variable/send?slancio_giorni=${nuovoSlancio}&slancio_stato=${nuovoStato}`;
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = urlKWGT;
-        document.body.appendChild(iframe);
-        setTimeout(() => document.body.removeChild(iframe), 300);
-    }
-  </script>
+        // Avvio iniziale
+        render();
+    </script>
 </body>
 </html>
