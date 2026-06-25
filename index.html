@@ -91,7 +91,6 @@
             cursor: not-allowed;
         }
 
-        /* Sezione To-Do (Nascondila se vuoi isolare visivamente il widget) */
         .todo-container {
             width: 280px;
             background: var(--card-bg);
@@ -141,34 +140,19 @@
         .todo-item input {
             margin-right: 10px;
         }
-
-        /* Nasconde i To-Do se aperto dentro il widget tramite URL parametrizzato */
-        body.widget-mode .todo-container {
-            display: none;
-        }
-        body.widget-mode {
-            padding: 5px;
-            background: transparent;
-        }
-        body.widget-mode .widget-container {
-            margin: 0;
-            box-shadow: none;
-        }
     </style>
 </head>
 <body>
 
-    <!-- BLOCCO WIDGET SLANCIO -->
     <div class="widget-container">
-        <div id="widget-title" class="widget-title">Nessuno Slancio</div>
+        <div id="widget-title" class="widget-title">Caricamento...</div>
         <div class="streak-display">
-            <span id="streak-emoji" class="streak-emoji">😴</span>
+            <span id="streak-emoji" class="streak-emoji">⏳</span>
             <span id="streak-count" class="streak-count">0</span>
         </div>
-        <button id="bottone-slancio" class="btn-slancio">Ottieni Slancio</button>
+        <button id="bottone-slancio" class="btn-slancio" disabled>Attendi...</button>
     </div>
 
-    <!-- BLOCCO LISTA DI TASK -->
     <div class="todo-container">
         <div class="todo-input-group">
             <input type="text" id="todo-input" class="todo-input" placeholder="Nuova task...">
@@ -178,45 +162,67 @@
     </div>
 
     <script>
-        // --- 1. STATO DELL'APPLICAZIONE ---
+        // --- 1. CONFIGURAZIONE DATABASE (JSONBin.io) ---
+        const BIN_ID = "6a3cdb17f5f4af5e292d6e4d"; 
+        const API_KEY = "$2a$10$A4j9.t7nUoHpV9/nQxciNu2HkFnnxMr8vyUgtdMvmLIdH8/eU30C2";
+        const REQ_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+        // --- 2. STATO APPLICAZIONE ---
         let state = {
             streak: 0,
-            lastCompletedDate: null,
-            todos: []
+            lastCompletedDate: "",
+            todos: [] // I To-Do rimangono locali per dispositivo
         };
 
-        // --- 2. CONTROLLO PARAMETRI URL (Per il Widget sulla Home) ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlStreak = urlParams.get('streak');
-        const urlDone = urlParams.get('done');
-
-        const isWidgetMode = (urlStreak !== null);
-
-        if (isWidgetMode) {
-            // Attiva la modalità grafica compatta per il widget della Home
-            document.body.classList.add('widget-mode');
-            state.streak = parseInt(urlStreak, 10) || 0;
-            if (urlDone === 'true') {
-                state.lastCompletedDate = new Date().toDateString();
-            }
-        } else {
-            // Modalità Browser normale: carica da localStorage
-            const savedState = localStorage.getItem('duo_todo_state');
-            if (savedState) {
-                try {
-                    state = JSON.parse(savedState);
-                } catch (e) {
-                    console.error("Errore nel caricamento dati", e);
+        // --- 3. FUNZIONI DATABASE ---
+        async function caricaDati() {
+            try {
+                const res = await fetch(`${REQ_URL}/latest`, {
+                    headers: { "X-Master-Key": API_KEY }
+                });
+                const data = await res.json();
+                state.streak = data.record.streak || 0;
+                state.lastCompletedDate = data.record.lastCompletedDate || "";
+            } catch (e) {
+                console.error("Errore recupero dati DB, provo localStorage alternativo:", e);
+                const backup = localStorage.getItem('duo_todo_streak_backup');
+                if (backup) {
+                    const parsed = JSON.parse(backup);
+                    state.streak = parsed.streak;
+                    state.lastCompletedDate = parsed.lastCompletedDate;
                 }
+            }
+            
+            // Carica i To-Do locali
+            const savedTodos = localStorage.getItem('duo_todos_local');
+            if (savedTodos) state.todos = JSON.parse(savedTodos);
+            
+            render();
+        }
+
+        async function salvaDati(nuovoStreak, nuovaData) {
+            // Backup locale immediato per feedback rapido
+            localStorage.setItem('duo_todo_streak_backup', JSON.stringify({ streak: nuovoStreak, lastCompletedDate: nuovaData }));
+            
+            try {
+                await fetch(REQ_URL, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Master-Key": API_KEY
+                    },
+                    body: JSON.stringify({ streak: nuovoStreak, lastCompletedDate: nuovaData })
+                });
+            } catch (e) {
+                console.error("Errore salvataggio DB:", e);
             }
         }
 
-        // --- 3. RENDERING GRAFICO ---
+        // --- 4. AGGIORNAMENTO GRAFICA ---
         function render() {
             const todayStr = new Date().toDateString();
             const isCompletedToday = state.lastCompletedDate === todayStr;
 
-            // Aggiorna Contatore ed Emoji
             document.getElementById('streak-count').innerText = state.streak;
             
             if (isCompletedToday) {
@@ -231,63 +237,52 @@
                 document.getElementById('bottone-slancio').disabled = false;
             }
 
-            // Genera la lista dei To-Do (se non siamo in modalità widget)
-            if (!isWidgetMode) {
-                const listEl = document.getElementById('todo-list');
-                listEl.innerHTML = '';
-                state.todos.forEach((todo, index) => {
-                    const li = document.createElement('li');
-                    li.className = 'todo-item';
-                    li.innerHTML = `
-                        <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
-                        <span style="${todo.done ? 'text-decoration: line-through; color: #afafaf;' : ''}">${todo.text}</span>
-                    `;
-                    listEl.appendChild(li);
-                });
-            }
+            // Renderizza la lista To-Do
+            const listEl = document.getElementById('todo-list');
+            listEl.innerHTML = '';
+            state.todos.forEach((todo, index) => {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+                li.innerHTML = `
+                    <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
+                    <span style="${todo.done ? 'text-decoration: line-through; color: #afafaf;' : ''}">${todo.text}</span>
+                `;
+                listEl.appendChild(li);
+            });
         }
 
-        // --- 4. FUNZIONI LOGICHE ED EVENTI ---
+        // --- 5. EVENTI ---
         
-        // Click del bottone Slancio
-        document.getElementById('bottone-slancio').addEventListener('click', () => {
+        // Pressione pulsante slancio
+        document.getElementById('bottone-slancio').addEventListener('click', async () => {
             const todayStr = new Date().toDateString();
             if (state.lastCompletedDate !== todayStr) {
                 state.streak += 1;
                 state.lastCompletedDate = todayStr;
-                
-                if (!isWidgetMode) {
-                    localStorage.setItem('duo_todo_state', JSON.stringify(state));
-                }
-                
-                render();
-
-                // TRUCCO: Genera l'URL aggiornato e naviga su di esso per mostrarlo nella barra indirizzi
-                const newUrl = `${window.location.origin}${window.location.pathname}?streak=${state.streak}&done=true`;
-                window.location.href = newUrl;
+                render(); 
+                await salvaDati(state.streak, state.lastCompletedDate);
             }
         });
 
-        // Aggiungi Task
+        // Gestione To-Do List
         document.getElementById('todo-add').addEventListener('click', () => {
             const input = document.getElementById('todo-input');
             if (input.value.trim() !== '') {
                 state.todos.push({ text: input.value.trim(), done: false });
                 input.value = '';
-                localStorage.setItem('duo_todo_state', JSON.stringify(state));
+                localStorage.setItem('duo_todos_local', JSON.stringify(state.todos));
                 render();
             }
         });
 
-        // Cambia stato Task
         window.toggleTodo = function(index) {
             state.todos[index].done = !state.todos[index].done;
-            localStorage.setItem('duo_todo_state', JSON.stringify(state));
+            localStorage.setItem('duo_todos_local', JSON.stringify(state.todos));
             render();
         };
 
-        // Avvio iniziale
-        render();
+        // Esecuzione all'avvio
+        caricaDati();
     </script>
 </body>
 </html>
