@@ -2,19 +2,33 @@
 <html>
 <head><meta charset="UTF-8"></head>
 <body>
-  <div id="streak-count">0</div>
-  <div id="streak-status">da_fare</div>
+  <div id="streak-count">⏳</div>
+  <div id="streak-status">caricamento</div>
 
   <script>
-    const savedState = localStorage.getItem('duo_todo_state');
-    if (savedState) {
-      const state = JSON.parse(savedState);
-      const todayStr = new Date().toDateString();
-      const isCompletedToday = state.lastCompletedDate === todayStr;
-      
-      document.getElementById('streak-count').innerText = state.streak;
-      document.getElementById('streak-status').innerText = isCompletedToday ? 'attivo' : 'da_fare';
+    const BIN_ID = "6a3cdb17f5f4af5e292d6e4d"; 
+    const API_KEY = "$2a$10$A4j9.t7nUoHpV9/nQxciNu2HkFnnxMr8vyUgtdMvmLIdH8/eU30C2";
+
+    async function esportaDatiPerKWGT() {
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+          headers: { "X-Master-Key": API_KEY }
+        });
+        const data = await res.json();
+        
+        const streak = data.record.streak || 0;
+        const lastDate = data.record.lastCompletedDate || "";
+        const isCompletedToday = lastDate === new Date().toDateString();
+        
+        document.getElementById('streak-count').innerText = streak;
+        document.getElementById('streak-status').innerText = isCompletedToday ? 'attivo' : 'da_fare';
+      } catch (e) {
+        document.getElementById('streak-count').innerText = "0";
+        document.getElementById('streak-status').innerText = "errore";
+      }
     }
+
+    esportaDatiPerKWGT();
   </script>
 </body>
 </html>
