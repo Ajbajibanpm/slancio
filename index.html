@@ -13,7 +13,6 @@
             --border-color: #e5e5e5;
             --primary-color: #1cb0f6;
             
-            /* Colori dinamici per lo slancio */
             --streak-active-bg: #feeeda;
             --streak-active-border: #ff9600;
             --streak-inactive-bg: #e1f5fe;
@@ -31,7 +30,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: background 0.3s ease;
         }
 
         .widget-container {
@@ -153,8 +151,16 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 0;
+            padding: 10px 8px;
             border-bottom: 1px solid var(--border-color);
+            background: var(--card-bg);
+            cursor: grab;
+            user-select: none;
+        }
+
+        .todo-item.dragging {
+            opacity: 0.5;
+            background: #f0f0f0;
         }
 
         .todo-left {
@@ -164,6 +170,7 @@
 
         .todo-item input {
             margin-right: 10px;
+            cursor: pointer;
         }
 
         .btn-delete {
@@ -176,9 +183,50 @@
             padding: 0 5px;
         }
 
-        .settings-container {
+        /* Menu Impostazioni a comparsa */
+        .settings-dropdown {
             width: 280px;
-            text-align: center;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 4px 0 var(--border-color);
+            overflow: hidden;
+        }
+
+        .settings-header {
+            padding: 12px 20px;
+            font-weight: bold;
+            font-size: 14px;
+            background: #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .settings-content {
+            padding: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .settings-content.open {
+            display: flex;
+        }
+
+        .notes-area {
+            width: 100%;
+            height: 80px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+            box-sizing: border-box;
         }
 
         .btn-reset {
@@ -222,9 +270,16 @@
         <ul id="todo-list" class="todo-list"></ul>
     </div>
 
-    <!-- IMPOSTAZIONI / TEST -->
-    <div class="settings-container">
-        <button id="btn-reset-streak" class="btn-reset">Azzera Slancio</button>
+    <!-- PANNELLO IMPOSTAZIONI COMPATTO -->
+    <div class="settings-dropdown">
+        <div class="settings-header" onclick="toggleSettings()">
+            <span>Impostazioni & Note</span>
+            <span id="settings-arrow">▼</span>
+        </div>
+        <div id="settings-content" class="settings-content">
+            <textarea id="notes-input" class="notes-area" placeholder="Scrivi qui le tue note o promemoria..."></textarea>
+            <button id="btn-reset-streak" class="btn-reset">Azzera Slancio (Test)</button>
+        </div>
     </div>
 
     <script>
@@ -238,7 +293,8 @@
             streak: 0,
             lastCompletedDate: "",
             todos: [],
-            isLostState: false // Serve per tracciare visivamente la perdita dello slancio
+            notes: "",
+            isLostState: false
         };
 
         const frasiAttivo = [
@@ -272,6 +328,7 @@
                 state.streak = data.record.streak || 0;
                 state.lastCompletedDate = data.record.lastCompletedDate || "";
                 state.todos = data.record.todos || [];
+                state.notes = data.record.notes || "";
                 state.isLostState = data.record.isLostState || false;
 
                 verificaPassaggioTempo();
@@ -283,10 +340,13 @@
                     verificaPassaggioTempo();
                 }
             }
+            document.getElementById('notes-input').value = state.notes;
             render();
+            initDragAndDrop();
         }
 
         async function salvaDati() {
+            state.notes = document.getElementById('notes-input').value;
             localStorage.setItem('backup_state', JSON.stringify(state));
             try {
                 await fetch(REQ_URL, {
@@ -315,11 +375,11 @@
             const differenzaGiorni = Math.floor(differenzaTempo / (1000 * 60 * 60 * 24));
 
             if (differenzaGiorni === 1) {
-                // Nuovo giorno: toglie le spunte e disattiva lo stato "perso" visivo se c'era
+                // Nuovo giorno: i task mantengono il testo ma si svuotano le sbarrature
                 state.todos.forEach(t => t.done = false);
                 state.isLostState = false;
             } else if (differenzaGiorni > 1) {
-                // Mancato rispetto del giorno: azzera slancio e toglie le spunte
+                // Saltato il giorno: azzera slancio e toglie sbarrature
                 state.streak = 0;
                 state.isLostState = true;
                 state.todos.forEach(t => t.done = false);
@@ -343,7 +403,6 @@
 
             document.getElementById('streak-count').innerText = state.streak;
             
-            // Logica cromatica e di stato dinamica
             if (isCompletedToday) {
                 card.style.backgroundColor = "var(--streak-active-bg)";
                 card.style.borderColor = "var(--streak-active-border)";
@@ -381,6 +440,8 @@
             state.todos.forEach((todo, index) => {
                 const li = document.createElement('li');
                 li.className = 'todo-item';
+                li.id = `todo-${index}`;
+                li.setAttribute('draggable', 'true');
                 li.innerHTML = `
                     <div class="todo-left">
                         <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
@@ -389,6 +450,48 @@
                     <button class="btn-delete" onclick="eliminaTodo(${index})">✕</button>
                 `;
                 listEl.appendChild(li);
+            });
+        }
+
+        // Gestione drag and drop nativo
+        function initDragAndDrop() {
+            const list = document.getElementById('todo-list');
+            
+            list.addEventListener('dragstart', (e) => {
+                const target = e.target.closest('.todo-item');
+                if (target) target.classList.add('dragging');
+            });
+
+            list.addEventListener('dragend', async (e) => {
+                const target = e.target.closest('.todo-item');
+                if (target) {
+                    target.classList.remove('dragging');
+                    
+                    // Ricostruisci l'array in base all'ordine degli elementi nel DOM
+                    const items = Array.from(list.querySelectorAll('.todo-item'));
+                    const nuoviTodos = items.map(item => {
+                        const index = parseInt(item.id.replace('todo-', ''), 10);
+                        return state.todos[index];
+                    });
+                    
+                    state.todos = nuoviTodos;
+                    render();
+                    await salvaDati();
+                    initDragAndDrop(); // Riaggancia gli ID aggiornati
+                }
+            });
+
+            list.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const draggingItem = list.querySelector('.dragging');
+                if (!draggingItem) return;
+                
+                const siblings = Array.from(list.querySelectorAll('.todo-item:not(.dragging)'));
+                const nextSibling = siblings.find(sibling => {
+                    return e.clientY <= sibling.getBoundingClientRect().top + sibling.getBoundingClientRect().height / 2;
+                });
+                
+                list.insertBefore(draggingItem, nextSibling);
             });
         }
 
@@ -411,6 +514,7 @@
                 input.value = '';
                 render();
                 await salvaDati();
+                initDragAndDrop();
             }
         });
 
@@ -418,13 +522,27 @@
             state.todos[index].done = !state.todos[index].done;
             render();
             await salvaDati();
+            initDragAndDrop();
         };
 
         window.eliminaTodo = async function(index) {
             state.todos.splice(index, 1);
             render();
             await salvaDati();
+            initDragAndDrop();
         };
+
+        // Salvataggio automatico note quando si smette di scrivere
+        document.getElementById('notes-input').addEventListener('blur', async () => {
+            await salvaDati();
+        });
+
+        function toggleSettings() {
+            const content = document.getElementById('settings-content');
+            const arrow = document.getElementById('settings-arrow');
+            content.classList.toggle('open');
+            arrow.innerText = content.classList.contains('open') ? '▲' : '▼';
+        }
 
         document.getElementById('btn-reset-streak').addEventListener('click', async () => {
             if (confirm("Vuoi forzare l'azzeramento dello slancio (Simulazione Giorno Perso)?")) {
@@ -435,6 +553,7 @@
                 document.getElementById('motivation').innerText = prendiFraseRandom(frasiPerso);
                 render();
                 await salvaDati();
+                initDragAndDrop();
             }
         });
 
