@@ -12,6 +12,14 @@
             --text-sub: #afafaf;
             --border-color: #e5e5e5;
             --primary-color: #1cb0f6;
+            
+            /* Colori dinamici per lo slancio */
+            --streak-active-bg: #feeeda;
+            --streak-active-border: #ff9600;
+            --streak-inactive-bg: #e1f5fe;
+            --streak-inactive-border: #1cb0f6;
+            --streak-lost-bg: #ffebee;
+            --streak-lost-border: #ff4b4b;
         }
 
         body {
@@ -23,6 +31,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            transition: background 0.3s ease;
         }
 
         .widget-container {
@@ -34,6 +43,7 @@
             text-align: center;
             box-shadow: 0 4px 0 var(--border-color);
             margin-bottom: 20px;
+            transition: all 0.3s ease;
         }
 
         .widget-title {
@@ -42,7 +52,15 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             color: var(--text-sub);
+            margin-bottom: 5px;
+        }
+
+        .motivation-text {
+            font-size: 14px;
+            font-style: italic;
+            color: #777;
             margin-bottom: 10px;
+            min-height: 20px;
         }
 
         .streak-display {
@@ -98,6 +116,7 @@
             border-radius: 20px;
             padding: 20px;
             box-shadow: 0 4px 0 var(--border-color);
+            margin-bottom: 20px;
         }
 
         .todo-input-group {
@@ -133,26 +152,68 @@
         .todo-item {
             display: flex;
             align-items: center;
+            justify-content: space-between;
             padding: 8px 0;
             border-bottom: 1px solid var(--border-color);
+        }
+
+        .todo-left {
+            display: flex;
+            align-items: center;
         }
 
         .todo-item input {
             margin-right: 10px;
         }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #ff4b4b;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 5px;
+        }
+
+        .settings-container {
+            width: 280px;
+            text-align: center;
+        }
+
+        .btn-reset {
+            background-color: #ff4b4b;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #d13b3b;
+            text-transform: uppercase;
+        }
+
+        .btn-reset:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
 
-    <div class="widget-container">
+    <!-- REPARTO SLANCIO -->
+    <div id="streak-card" class="widget-container">
         <div id="widget-title" class="widget-title">Caricamento...</div>
+        <div id="motivation" class="motivation-text"></div>
         <div class="streak-display">
-            <span id="streak-emoji" class="streak-emoji">⏳</span>
+            <span id="streak-emoji" class="streak-emoji">😴</span>
             <span id="streak-count" class="streak-count">0</span>
         </div>
         <button id="bottone-slancio" class="btn-slancio" disabled>Attendi...</button>
     </div>
 
+    <!-- REPARTO TO-DO -->
     <div class="todo-container">
         <div class="todo-input-group">
             <input type="text" id="todo-input" class="todo-input" placeholder="Nuova task...">
@@ -161,49 +222,72 @@
         <ul id="todo-list" class="todo-list"></ul>
     </div>
 
+    <!-- IMPOSTAZIONI / TEST -->
+    <div class="settings-container">
+        <button id="btn-reset-streak" class="btn-reset">Azzera Slancio</button>
+    </div>
+
     <script>
-        // --- 1. CONFIGURAZIONE DATABASE (JSONBin.io) ---
         const BIN_ID = "6a3cdb17f5f4af5e292d6e4d"; 
+
         const API_KEY = "$2a$10$A4j9.t7nUoHpV9/nQxciNu2HkFnnxMr8vyUgtdMvmLIdH8/eU30C2";
+
         const REQ_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
-        // --- 2. STATO APPLICAZIONE ---
         let state = {
             streak: 0,
             lastCompletedDate: "",
-            todos: [] // I To-Do rimangono locali per dispositivo
+            todos: [],
+            isLostState: false // Serve per tracciare visivamente la perdita dello slancio
         };
 
-        // --- 3. FUNZIONI DATABASE ---
+        const frasiAttivo = [
+            "Inarrestabile! Continua così!",
+            "Il fuoco brucia! Ottimo lavoro!",
+            "Nessuno può fermarti oggi!",
+            "Slancio mantenuto con successo!"
+        ];
+
+        const frasiDaFare = [
+            "Completa i tuoi task per accendere il fuoco!",
+            "Non spegnere la serie oggi!",
+            "Un piccolo sforzo per mantenere lo slancio!",
+            "La costanza è la tua arma segreta."
+        ];
+
+        const frasiPerso = [
+            "Oh no, lo slancio si è spento! Ripartiamo?",
+            "Può succedere. L'importante è rialzarsi!",
+            "Ricominciamo da 1 oggi stesso!",
+            "Il gufo ti osserva... torna in carreggiata!"
+        ];
+
         async function caricaDati() {
             try {
                 const res = await fetch(`${REQ_URL}/latest`, {
                     headers: { "X-Master-Key": API_KEY }
                 });
                 const data = await res.json();
+                
                 state.streak = data.record.streak || 0;
                 state.lastCompletedDate = data.record.lastCompletedDate || "";
+                state.todos = data.record.todos || [];
+                state.isLostState = data.record.isLostState || false;
+
+                verificaPassaggioTempo();
             } catch (e) {
-                console.error("Errore recupero dati DB, provo localStorage alternativo:", e);
-                const backup = localStorage.getItem('duo_todo_streak_backup');
+                console.error("Errore di rete, uso backup locale:", e);
+                const backup = localStorage.getItem('backup_state');
                 if (backup) {
-                    const parsed = JSON.parse(backup);
-                    state.streak = parsed.streak;
-                    state.lastCompletedDate = parsed.lastCompletedDate;
+                    state = JSON.parse(backup);
+                    verificaPassaggioTempo();
                 }
             }
-            
-            // Carica i To-Do locali
-            const savedTodos = localStorage.getItem('duo_todos_local');
-            if (savedTodos) state.todos = JSON.parse(savedTodos);
-            
             render();
         }
 
-        async function salvaDati(nuovoStreak, nuovaData) {
-            // Backup locale immediato per feedback rapido
-            localStorage.setItem('duo_todo_streak_backup', JSON.stringify({ streak: nuovoStreak, lastCompletedDate: nuovaData }));
-            
+        async function salvaDati() {
+            localStorage.setItem('backup_state', JSON.stringify(state));
             try {
                 await fetch(REQ_URL, {
                     method: "PUT",
@@ -211,77 +295,149 @@
                         "Content-Type": "application/json",
                         "X-Master-Key": API_KEY
                     },
-                    body: JSON.stringify({ streak: nuovoStreak, lastCompletedDate: nuovaData })
+                    body: JSON.stringify(state)
                 });
             } catch (e) {
-                console.error("Errore salvataggio DB:", e);
+                console.error("Impossibile salvare sul server:", e);
             }
         }
 
-        // --- 4. AGGIORNAMENTO GRAFICA ---
+        function verificaPassaggioTempo() {
+            if (!state.lastCompletedDate) return;
+
+            const oggi = new Date();
+            oggi.setHours(0,0,0,0);
+
+            const dataUltimoSlancio = new Date(state.lastCompletedDate);
+            dataUltimoSlancio.setHours(0,0,0,0);
+
+            const differenzaTempo = oggi.getTime() - dataUltimoSlancio.getTime();
+            const differenzaGiorni = Math.floor(differenzaTempo / (1000 * 60 * 60 * 24));
+
+            if (differenzaGiorni === 1) {
+                // Nuovo giorno: toglie le spunte e disattiva lo stato "perso" visivo se c'era
+                state.todos.forEach(t => t.done = false);
+                state.isLostState = false;
+            } else if (differenzaGiorni > 1) {
+                // Mancato rispetto del giorno: azzera slancio e toglie le spunte
+                state.streak = 0;
+                state.isLostState = true;
+                state.todos.forEach(t => t.done = false);
+            }
+        }
+
+        function prendiFraseRandom(lista) {
+            const index = Math.floor(Math.random() * lista.length);
+            return lista[index];
+        }
+
         function render() {
             const todayStr = new Date().toDateString();
             const isCompletedToday = state.lastCompletedDate === todayStr;
+            
+            const card = document.getElementById('streak-card');
+            const emojiEl = document.getElementById('streak-emoji');
+            const titleEl = document.getElementById('widget-title');
+            const btn = document.getElementById('bottone-slancio');
+            const motivationEl = document.getElementById('motivation');
 
             document.getElementById('streak-count').innerText = state.streak;
             
+            // Logica cromatica e di stato dinamica
             if (isCompletedToday) {
-                document.getElementById('streak-emoji').innerText = '🔥';
-                document.getElementById('widget-title').innerText = 'Slancio Attivo!';
-                document.getElementById('bottone-slancio').innerText = 'Completato';
-                document.getElementById('bottone-slancio').disabled = true;
+                card.style.backgroundColor = "var(--streak-active-bg)";
+                card.style.borderColor = "var(--streak-active-border)";
+                emojiEl.innerText = '🔥';
+                titleEl.innerText = 'Slancio Attivo!';
+                btn.innerText = 'Completato';
+                btn.disabled = true;
+                if(!motivationEl.innerText || frasiDaFare.includes(motivationEl.innerText) || frasiPerso.includes(motivationEl.innerText)) {
+                    motivationEl.innerText = prendiFraseRandom(frasiAttivo);
+                }
+            } else if (state.isLostState) {
+                card.style.backgroundColor = "var(--streak-lost-bg)";
+                card.style.borderColor = "var(--streak-lost-border)";
+                emojiEl.innerText = '😢';
+                titleEl.innerText = 'Slancio Perso';
+                btn.innerText = 'Ripristina Slancio';
+                btn.disabled = false;
+                if(!motivationEl.innerText || frasiAttivo.includes(motivationEl.innerText) || frasiDaFare.includes(motivationEl.innerText)) {
+                    motivationEl.innerText = prendiFraseRandom(frasiPerso);
+                }
             } else {
-                document.getElementById('streak-emoji').innerText = '😴';
-                document.getElementById('widget-title').innerText = 'Nessuno Slancio';
-                document.getElementById('bottone-slancio').innerText = 'Ottieni Slancio';
-                document.getElementById('bottone-slancio').disabled = false;
+                card.style.backgroundColor = "var(--streak-inactive-bg)";
+                card.style.borderColor = "var(--streak-inactive-border)";
+                emojiEl.innerText = '😴';
+                titleEl.innerText = 'Nessuno Slancio';
+                btn.innerText = 'Ottieni Slancio';
+                btn.disabled = false;
+                if(!motivationEl.innerText || frasiAttivo.includes(motivationEl.innerText) || frasiPerso.includes(motivationEl.innerText)) {
+                    motivationEl.innerText = prendiFraseRandom(frasiDaFare);
+                }
             }
 
-            // Renderizza la lista To-Do
             const listEl = document.getElementById('todo-list');
             listEl.innerHTML = '';
             state.todos.forEach((todo, index) => {
                 const li = document.createElement('li');
                 li.className = 'todo-item';
                 li.innerHTML = `
-                    <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
-                    <span style="${todo.done ? 'text-decoration: line-through; color: #afafaf;' : ''}">${todo.text}</span>
+                    <div class="todo-left">
+                        <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleTodo(${index})">
+                        <span style="${todo.done ? 'text-decoration: line-through; color: #afafaf;' : ''}">${todo.text}</span>
+                    </div>
+                    <button class="btn-delete" onclick="eliminaTodo(${index})">✕</button>
                 `;
                 listEl.appendChild(li);
             });
         }
 
-        // --- 5. EVENTI ---
-        
-        // Pressione pulsante slancio
         document.getElementById('bottone-slancio').addEventListener('click', async () => {
             const todayStr = new Date().toDateString();
             if (state.lastCompletedDate !== todayStr) {
                 state.streak += 1;
                 state.lastCompletedDate = todayStr;
+                state.isLostState = false;
+                document.getElementById('motivation').innerText = prendiFraseRandom(frasiAttivo);
                 render(); 
-                await salvaDati(state.streak, state.lastCompletedDate);
+                await salvaDati();
             }
         });
 
-        // Gestione To-Do List
-        document.getElementById('todo-add').addEventListener('click', () => {
+        document.getElementById('todo-add').addEventListener('click', async () => {
             const input = document.getElementById('todo-input');
             if (input.value.trim() !== '') {
                 state.todos.push({ text: input.value.trim(), done: false });
                 input.value = '';
-                localStorage.setItem('duo_todos_local', JSON.stringify(state.todos));
                 render();
+                await salvaDati();
             }
         });
 
-        window.toggleTodo = function(index) {
+        window.toggleTodo = async function(index) {
             state.todos[index].done = !state.todos[index].done;
-            localStorage.setItem('duo_todos_local', JSON.stringify(state.todos));
             render();
+            await salvaDati();
         };
 
-        // Esecuzione all'avvio
+        window.eliminaTodo = async function(index) {
+            state.todos.splice(index, 1);
+            render();
+            await salvaDati();
+        };
+
+        document.getElementById('btn-reset-streak').addEventListener('click', async () => {
+            if (confirm("Vuoi forzare l'azzeramento dello slancio (Simulazione Giorno Perso)?")) {
+                state.streak = 0;
+                state.lastCompletedDate = "";
+                state.isLostState = true;
+                state.todos.forEach(t => t.done = false);
+                document.getElementById('motivation').innerText = prendiFraseRandom(frasiPerso);
+                render();
+                await salvaDati();
+            }
+        });
+
         caricaDati();
     </script>
 </body>
